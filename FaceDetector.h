@@ -15,56 +15,53 @@
 #include <vector>
 #include <cmath>
 #include<time.h>
-#include "LineChart.h"
 #include "string"
 #include <cmath>
 #include "algorithm"
+#include<iostream>
+#include<ctime>
 
 enum EyeType {
     Left,
     Right
 };
 
+enum FaceDetectorKit {
+    Dlib_frontal_face_detector,
+    Opencv_CascadeClassifier
+};
+
 class FaceDetector {
 public:
-    bool isLeftEyeBlinked;
-    bool isRightEyeBlinked;
 
-    // TODO 主要接口
-    virtual void OnLeftEyeBlinked();
-
-    virtual void OnRightEyeBlinked();
+    double leftEyeFeature;
+    double rightEyeFeature;
 
 
-    FaceDetector();
+    // TODO 主要接口，编译时虚函数必须实现，不实现的注释掉
+//    virtual void OnLeftEyeBlinked();
+//
+//    virtual void OnRightEyeBlinked();
 
+
+    FaceDetector(FaceDetectorKit kit, bool debug = false);
+
+    // useFaceDetectRectangle 是否使用人脸检测的框来进行特征点识别，用的话精确很多但是慢很多
     void Run();
 
 private:
-    // 绘图相关的坐标参数
-    int eye_previous_x = 10;            //原点横坐标
-    int eye_previous_y = 890;        //原点纵坐标
-    int eye_now_x = 1;
-    int eye_now_y = 1;
+    FaceDetectorKit toolkit;
+    bool debugMode;
 
-
-    // 眨眼的阈值，需要先大于这个值，然后小于这个值，然后再次大于这个值，就算作眨眼
-    float blinkThreshold = 0.1;
-
-
-    LineChart *lineChart;
 
     float handleOneEye(std::vector<dlib::full_object_detection> shapes,
                        EyeType eye,
                        cv::Mat canvas);
 
     float getDistance(float x1, float y1, float x2, float y2);
+    void updateHeadYawRollPitchFrom68Points(dlib::full_object_detection shapes);
 
-    bool judgeIfBlinkEye(EyeType eye, float nowEyeFeature);
 
-
-    bool leftEyeLoaded;// 当眼睛闭上，小于blinkThreshold就是装载了，当眼睛睁开，大于上面的阈值，如果装载了就是能够发射，然后算作一次眨眼
-    bool rightEyeLoaded;
 
 
 };

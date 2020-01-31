@@ -7,7 +7,8 @@
 LineChart::LineChart(int height, int width) {
     this->height = height;
     this->width = width;
-    Canvas = cv::Mat::zeros(width, height,cv::CV_8UC3);
+    Canvas = cv::Mat::zeros(width,height,3);
+     //Canvas = cv::Mat::zeros(width, height,cv::CV_8UC3);
     p1 = cv::Point(10, 0);
     p2 = cv::Point(10, height);
     p3 = cv::Point(0, height - 10);

@@ -4,11 +4,13 @@
 
 #include "FaceDetector.h"
 
-FaceDetector::FaceDetector() {
+FaceDetector::FaceDetector(FaceDetectorKit kit, bool debug) {
+    this->toolkit = kit;
+    this->debugMode = debug;
 
-    lineChart = new LineChart();
 
-}
+};
+
 
 float FaceDetector::getDistance(float x1, float y1, float x2, float y2) {
     return std::sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
@@ -93,17 +95,18 @@ float FaceDetector::handleOneEye(
 
     // 下面的debug数据只在左眼生效
     if (eye == Left) {
-        std::cout << "闭眼检测特征： " << eyeFeature << std::endl;
+        if (debugMode)std::cout << "Eye feature " << eyeFeature << std::endl;
 
-        putText(canvas, "左眼高度：" + std::to_string(height), cv::Point(10, 100), cv::FONT_HERSHEY_COMPLEX,
-                1.0,
+        putText(canvas, "left eye height " + std::to_string(height), cv::Point(10, 100), cv::FONT_HERSHEY_SIMPLEX,
+                0.3,
                 cv::Scalar(12, 255, 200), 1,
                 cv::LINE_AA);
-        putText(canvas, "左眼长度：" + std::to_string(length), cv::Point(10, 200), cv::FONT_HERSHEY_COMPLEX,
-                1.0,
+        putText(canvas, "left eye length " + std::to_string(length), cv::Point(10, 150), cv::FONT_HERSHEY_SIMPLEX,
+                0.3,
                 cv::Scalar(12, 255, 200), 1,
                 cv::LINE_AA);
-        putText(canvas, "左眼眨眼特征：" + std::to_string(eyeFeature), cv::Point(10, 300), cv::FONT_HERSHEY_COMPLEX, 1.0,
+        putText(canvas, "left eye feature" + std::to_string(eyeFeature), cv::Point(10, 200), cv::FONT_HERSHEY_SIMPLEX,
+                0.3,
                 cv::Scalar(12, 255, 200), 1,
                 cv::LINE_AA);
 
@@ -112,112 +115,159 @@ float FaceDetector::handleOneEye(
 
 }
 
-bool FaceDetector::judgeIfBlinkEye(EyeType eye, float nowEyeFeature) {
-    // 眨眼的算法
-    // 如果特征值小于阈值，那么算作装载（完全闭上了眼睛）
-    if (nowEyeFeature < blinkThreshold) {
-        if (eye == Left)leftEyeLoaded = true;
-        else if (eye == Right)rightEyeLoaded = true;
-        return false;
-    }
-        // 特征值大于阈值，如果已经装载，那么就发射（算是睁开了眼睛），否则无视
-    else {
-        if (eye == Left && leftEyeLoaded) {
-            leftEyeLoaded = false;
-            return true;
-        } else if (eye == Right && rightEyeLoaded) {
-            rightEyeLoaded = false;
-            return true;
-        }
-        return false;
-    }
-}
 
 void FaceDetector::Run() {
+    std::clock_t startTime;
+    // 1. 摄像头准备
+    std::cout << "Try open camera\n";
+    cv::VideoCapture cap(0);
+    if (!cap.isOpened()) {
+        printf("Unable to connect a camera");
+        return;
+    }
+    dlib::shape_predictor pos_modle;// 关键点预测器，需要加载相应的权重，比如后面的68 face
+    // 2. 准备特征点检测
+    std::cout << "Loading weights for face feature point detecting\n";
     try {
-        cv::VideoCapture cap(0);
-        if (!cap.isOpened()) {   //打开摄像头
-            printf("Unable to connect a camera");
-            return;
-        }
-        dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
+        dlib::deserialize("./shape_predictor_68_face_landmarks.dat")
+                >> pos_modle;
+    } catch (...) {
+        std::cout
+                << "Can not load ./shape_predictor_68_face_landmarks.dat, please download from http://dlib.net/files/"
+                << "\n";
+        return;
+    }
+    // 3. 准备人脸bounding box检测，两套toolkit任选
+    dlib::frontal_face_detector detector;
+    cv::CascadeClassifier face_cascade;
 
-        dlib::shape_predictor pos_modle;// 关键点预测器，需要加载相应的权重，比如后面的68 face
-
-        // 这里的文件从http://dlib.net/files/中下载
+    if (toolkit == Dlib_frontal_face_detector) {
+        detector = dlib::get_frontal_face_detector();
+    } else if (toolkit == Opencv_CascadeClassifier) {
         try {
-            dlib::deserialize("D:/shape_predictor_68_face_landmarks/shape_predictor_68_face_landmarks.dat")
-                    >> pos_modle;
+            face_cascade.load("./haarcascade_frontalface_default.xml");
         } catch (...) {
             std::cout
-                    << "Can not load ./shape_predictor_68_face_landmarks.dat, please download from http://dlib.net/files/"
+                    << "Can not load ./haarcascade_frontalface_default.xml, please download from https://github.com/opencv/opencv/tree/master/data/haarcascades"
                     << "\n";
             return;
         }
-
-        while (cv::waitKey(30) != 27) {// 每间隔30 ms检测一次按键，不等于esc的话就继续
-            cv::Mat temp;
-            cap >> temp;
-
-
-            dlib::cv_image<dlib::bgr_pixel> cimg(temp);//将图像转化为dlib中的BGR的形式
-            std::vector<dlib::rectangle> faces = detector(cimg);// 检测人脸的数目
-            std::vector<dlib::full_object_detection> shapes;
-
-            if (!faces.empty()) {
-                // 这里最多检测1个人脸，为了省下cpu
-                shapes.push_back(pos_modle(cimg, faces[0]));
-            }
-            if (!shapes.empty()) {
-                // 这里会绘制所有faces的情况，实际上只有一个
-                for (int j = 0; j < shapes.size(); j++) {
-                    for (unsigned long i = 0; i < 68; i++) {// 得到的68个点的坐标，是之前predictor给出，predictor需要加载一个.mat矩阵以实现检测
-                        //用来画特征值的点
-                        cv::circle(temp, cvPoint(shapes[j].part(i).x(), shapes[j].part(i).y()), 1,
-                                   cv::Scalar(0, 0, 255), -1);
-                        //参数说明 图像 圆心 线条宽度 颜色 线的类型
-                        //显示数字，注意这些数字后面会用来求眼睛的宽度、位置等
-                        cv::putText(temp, std::to_string(i), cvPoint(shapes[0].part(i).x(), shapes[0].part(i).y()),
-                                    cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 0, 255));
-
-                    }
-                }
-                auto leftEyeFeature = handleOneEye(shapes, Left, temp);
-                auto rightEyeFeature = handleOneEye(shapes, Right, temp);
-                if ((leftEyeFeature < -1) || (rightEyeFeature < -1)) {
-                    std::cout << "检测失败\n";
-                    return;
-                }
-
-                if (judgeIfBlinkEye(Left, leftEyeFeature)) isLeftEyeBlinked = true;
-                if (judgeIfBlinkEye(Right, rightEyeFeature)) isRightEyeBlinked = true;
-
-                if (isLeftEyeBlinked) {
-                    std::cout << "眨了一下左眼\n";
-                }
-                if (isRightEyeBlinked) {
-                    std::cout << "眨了一下右眼\n";
-                }
-
-
-                // 画出左眼的眨眼特征曲线
-                eye_now_x = eye_now_x + 1;            //横坐标（每10个像素描一个点）
-                eye_now_y = lineChart->height - (leftEyeFeature * lineChart->height); //纵坐标，化最大值为900
-                cv::Point poi1 = cv::Point(eye_previous_x, eye_previous_y);        //上一个点
-                cv::Point poi2 = cv::Point(eye_now_x, eye_now_y);                //现在的点
-                cv::Scalar eyes_color = cv::Scalar(0, 255, 0);
-                cv::line(lineChart->Canvas, poi1, poi2, eyes_color, 1, cv::LINE_AA);            //画线
-                eye_previous_x = eye_now_x;
-                eye_previous_y = eye_now_y;
-                cv::namedWindow("Blink waveform figure", cv::WINDOW_AUTOSIZE);
-
-            }
-            //Display it all on the screen  展示每一帧的图片
-            cv::imshow("Dlib标记", temp);
-            lineChart->show(); // 展示linechart的图片用于debug
-        }
     }
-    catch (std::exception &e) {
-        std::cout << e.what() << std::endl;
-    };
+
+    // 4. 主循环
+    std::cout << "Main loop\n";
+    while (cv::waitKey(1)) {
+        try {
+            // 5. 读入camera数据，预处理
+            startTime = std::clock();
+            cv::Mat temp_o;
+            cap >> temp_o;
+            // 为了减少计算量，选择进行图像截取，截取成竖屏的样子可以不断尝试直到满足fps要求
+            auto o_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+            auto o_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+            // 这里砍掉一半的宽度
+            cv::Mat temp = temp_o(cv::Rect(o_width * 0.25, 0, o_width * 0.5, o_height)); // 左上的x y width height
+
+            dlib::cv_image<dlib::bgr_pixel> cimg(temp); // 将图像转化为dlib中的BGR的形式
+            std::vector<dlib::full_object_detection> shapes;
+            dlib::rectangle targetFaceRect;
+
+            if (debugMode)std::cout << "preprocess use time: " << std::clock() - startTime << "\n";
+            startTime = std::clock();
+
+
+            // 6. 检测脸部bounding box，两个toolkit，得到face
+            if (toolkit == Dlib_frontal_face_detector) {
+                std::vector<dlib::rectangle> faces = detector(cimg);// 检测人脸框
+
+                targetFaceRect = faces[0];
+            } else {
+                cv::Mat frame_gray;
+                cv::cvtColor(temp, frame_gray, cv::COLOR_BGR2GRAY);
+                cv::equalizeHist(frame_gray, frame_gray);
+                // 进行检测，将结果写入faces中
+                std::vector<cv::Rect> faces;
+                face_cascade.detectMultiScale(frame_gray, faces);
+                // 转成dlib的格式
+                targetFaceRect = dlib::rectangle(
+                        faces[0].x,
+                        faces[0].y,
+                        faces[0].x + faces[0].width,
+                        faces[0].y + faces[0].height);// left top right bottom
+            }
+            // 实际测试发现大量的时间都是用在检测face上，特征点反而没有太多消耗
+            if (debugMode)std::cout << "detect face use time: " << std::clock() - startTime << "\n";
+            startTime = std::clock();
+
+            shapes.push_back(pos_modle(cimg, targetFaceRect));
+            if (debugMode)std::cout << "face position handle use time: " << std::clock() - startTime << "\n";
+            startTime = std::clock();
+
+            if (shapes.empty())continue;
+
+            // 7. 使用bounding box得到特征点，绘制
+            for (int j = 0; j < shapes.size(); j++) {
+                for (unsigned long i = 0; i < 68; i++) {// 得到的68个点的坐标，是之前predictor给出，predictor需要加载一个.mat矩阵以实现检测
+                    //用来画特征值的点
+                    cv::circle(temp, cvPoint(shapes[j].part(i).x(), shapes[j].part(i).y()), 1,
+                               cv::Scalar(0, 0, 255), -1);
+                    //参数说明 图像 圆心 线条宽度 颜色 线的类型
+                    //显示数字，注意这些数字后面会用来求眼睛的宽度、位置等
+                    cv::putText(temp, std::to_string(i), cvPoint(shapes[0].part(i).x(), shapes[0].part(i).y()),
+                                cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 0, 255));
+
+                }
+            }
+            // 8. 获得眼部特征，获得完毕过后到另一个线程去处理！
+            leftEyeFeature = handleOneEye(shapes, Left, temp);
+            rightEyeFeature = handleOneEye(shapes, Right, temp);
+
+            cv::imshow("dlib", temp);
+
+
+// todo:下面的到另一个线程去处理，用上面得到的leftEyeFeature数据
+//            if ((leftEyeFeature < -1) || (rightEyeFeature < -1)) {
+//                std::cout << "Failed to get eye feature\n";
+//                continue;
+//            }
+//            // 9. 判断是否眨眼
+//            if (judgeIfBlinkEye(Left, leftEyeFeature)) isLeftEyeBlinked = true;
+//            if (judgeIfBlinkEye(Right, rightEyeFeature)) isRightEyeBlinked = true;
+//
+//            if (isLeftEyeBlinked) {
+//                std::cout << "Blink LEFT\n";
+//            }
+//            if (isRightEyeBlinked) {
+//                std::cout << "Blink RIGHT\n";
+//            }
+//
+//            if (debugMode)std::cout << "judge blink time: " << std::clock() - startTime << "\n";
+
+
+
+
+
+        } catch (std::exception &e) {
+            std::cout << "error: " << e.what() << "\n";
+            continue;
+        }
+
+    }
+}
+
+void FaceDetector::updateHeadYawRollPitchFrom68Points(dlib::full_object_detection shape) {
+    //从68特征点中得到头部的yaw roll pitch，使用https://blog.csdn.net/jacke121/article/details/102834801的方案
+    // 主要空间pose计算依赖Opencv:SolvePNP
+
+    // 1. 获得所有需要的点
+    int allPointsIndex[] = {17, 21, 22, 26, 36, 39, 42, 45, 31, 35, 48, 54, 57, 8};
+    auto allPoints = new std::vector<cv::Point>();
+    for (auto e :allPointsIndex) {
+        allPoints->push_back(cv::Point(shape.part(e).x(), shape.part(e).y()));
+    }
+
+    // TODO 上次写到这里
+
+
+
 }

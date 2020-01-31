@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(FaceControl)
 set(CMAKE_CXX_STANDARD 14)
-add_executable(FaceControl main.cpp FaceDetector.cpp FaceDetector.h LineChart.cpp LineChart.h)
+add_executable(FaceControl main.cpp FaceDetector.cpp FaceDetector.h BlinkJudge.cpp BlinkJudge.h QtGUI.cpp QtGUI.h)
 
 # -----qt 配置-----
 # Mac上只需要brew install qt即可
@@ -29,26 +29,16 @@ target_link_libraries(FaceControl Qt5::Widgets)
 add_subdirectory(C:/Users/Administrator/Documents/dlib dlib_bulid)
 target_link_libraries(FaceControl dlib::dlib)
 
-# -----opencv相关-windows下预编译-----
-# 预编译版本直接使用，比如在https://github.com/huihut/OpenCV-MinGW-Build下载预编译版本
-set(OPENCV_PATH C:\\Users\\Administrator\\Documents\\OpenCV-MinGW-Build-OpenCV-4.1.1-x64)
-# 找到所有.a文件，存储到ALL_OPENCV_LIBS
-FILE(GLOB ALL_OPENCV_LIBS ${OPENCV_PATH}/lib/*.a)
-include_directories(${OPENCV_PATH}/include)
-link_directories(${OPENCV_PATH}/lib)
-link_libraries(${ALL_OPENCV_LIBS})
-
-#target_link_libraries(FaceControl ${OPENSSH_PATH}/lib/libcrypto.a)
-
 # -----opencv相关-windows下-----
-# opencv官网下载安装解压，然后需要使用cmake进行编译，编译完成后设置好路径（注意编译好过后不能移动文件夹，否则需要重新编译）
+# 1-1. 编译：opencv官网下载安装解压，然后需要使用cmake进行编译，编译完成后设置好路径（注意编译好过后不能移动文件夹，否则需要重新编译），可以参考https://www.jianshu.com/p/4e1f1edabfda编译
+# 1-2. 下载预编译版本直接使用：比如在https://github.com/huihut/OpenCV-MinGW-Build下载预编译版本
+# 2. 把下面的Opencv_DIR设置成OpenCVConfig.cmake所在目录即可
 # 注意两个易错点，一个是根据报错提示设置OpenCV_DIR或者Opencv_DIR变量，另一个是在OpencvDir路径下把OpenCVConfig.cmake重命名为报错中提示的需要的OpencvConfig.cmake
-# 可以参考https://www.jianshu.com/p/4e1f1edabfda编译
-#set(Opencv_DIR C:\\Users\\Administrator\\Documents\\opencv\\build)
-#find_package(Opencv REQUIRED)
-## 找到过后就有了OpenCV_LIBS等变量，进行设置
-#INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
-#TARGET_LINK_LIBRARIES(FaceControl ${OpenCV_LIBS})
+set(Opencv_DIR C:\\Users\\Administrator\\Documents\\OpenCV-MinGW-Build-OpenCV-4.1.1-x64)
+find_package(Opencv REQUIRED)
+# 找到过后就有了OpenCV_LIBS等变量，进行设置
+INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
+TARGET_LINK_LIBRARIES(FaceControl ${OpenCV_LIBS})
 
 # -----opencv相关-mac下-----
 #find_package(OpenCV REQUIRED)
