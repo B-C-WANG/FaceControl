@@ -167,8 +167,8 @@ void FaceDetector::Run() {
             auto o_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
             // 这里砍掉一半的宽度
             cv::Mat temp = temp_o(cv::Rect(o_width * 0.25, 0, o_width * 0.5, o_height)); // 左上的x y width height
-
             dlib::cv_image<dlib::bgr_pixel> cimg(temp); // 将图像转化为dlib中的BGR的形式
+
             std::vector<dlib::full_object_detection> shapes;
             dlib::rectangle targetFaceRect;
 
@@ -201,7 +201,6 @@ void FaceDetector::Run() {
 
             shapes.push_back(pos_modle(cimg, targetFaceRect));
             if (debugMode)std::cout << "face position handle use time: " << std::clock() - startTime << "\n";
-            startTime = std::clock();
 
             if (shapes.empty())continue;
 
@@ -222,6 +221,11 @@ void FaceDetector::Run() {
             leftEyeFeature = handleOneEye(shapes, Left, temp);
             rightEyeFeature = handleOneEye(shapes, Right, temp);
 
+            startTime = std::clock();
+
+            // 9. 然后处理头部Pose预测
+            updatePoseFrom68Points(shapes[0], (int) targetFaceRect.width(), (int) targetFaceRect.height());
+            if (debugMode)std::cout << "Pose estimate use time: " << std::clock() - startTime << "\n";
             cv::imshow("dlib", temp);
 
 
@@ -255,19 +259,84 @@ void FaceDetector::Run() {
     }
 }
 
-void FaceDetector::updateHeadYawRollPitchFrom68Points(dlib::full_object_detection shape) {
+void FaceDetector::updatePoseFrom68Points(
+        dlib::full_object_detection shapes,
+        int imageWidth,
+        int imageHeight
+) {
     //从68特征点中得到头部的yaw roll pitch，使用https://blog.csdn.net/jacke121/article/details/102834801的方案
     // 主要空间pose计算依赖Opencv:SolvePNP
 
     // 1. 获得所有需要的点
     int allPointsIndex[] = {17, 21, 22, 26, 36, 39, 42, 45, 31, 35, 48, 54, 57, 8};
-    auto allPoints = new std::vector<cv::Point>();
+    // point2d是2维double
+    auto allPoints = std::vector<cv::Point2d>();
     for (auto e :allPointsIndex) {
-        allPoints->push_back(cv::Point(shape.part(e).x(), shape.part(e).y()));
+        allPoints.push_back(cv::Point2d(shapes.part(e).x(), shapes.part(e).y()));
     }
+    if (debugMode)std::cout << "got all points \n";
 
-    // TODO 上次写到这里
+    auto focal_length = imageHeight;
+    auto centerPos = cv::Point(imageHeight / 2, imageWidth / 2);
+    if (debugMode)std::cout << "got center pos \n";
+
+    cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, centerPos.x,
+            0, focal_length, centerPos.y,
+            0, 0, 1);
+    if (debugMode)std::cout << "got camera matrix \n";
+
+    cv::Mat dist_coeffs = (cv::Mat_<double>(1,5)
+            << 7.0834633684407095e-002, 6.9140193737175351e-002, 0.0, 0.0, -1.3073460323689292e+000);
+
+    if (debugMode)std::cout << "got dist_coeffs \n";
+
+    cv::Mat rvec;
+    cv::Mat tvec;
+    if (debugMode)std::cout << "solve PNP \n";
+
+    // 下面的函数返回bool，原地修改rvec(旋转矩阵)和tvec(平移矩阵)
+    cv::solvePnP(
+            NormalFacePointsForPoseEstimate,
+            allPoints,
+            camera_matrix,
+            dist_coeffs,
+            rvec,
+            tvec,
+            cv::SOLVEPNP_ITERATIVE);
+
+
+    cv::Mat rotation3_3;
+    cv::Rodrigues(rvec, rotation3_3);
+    updatePoseFromRotationMatrix(rotation3_3);
+    // yaw是左右转，pitch是上下转动，roll是面内旋转
+    // todo: 增加动态图曲线工具，给出point list，绘制img
+    std::cout << "Yaw Roll Pitch " << YawAngle <<" "<< RollAngle <<" "<< PitchAngle << "\n";
+
+
+    /*投影一条直线而已
+	std::vector<Point3d> nose_end_point3D;
+	std::vector<Point2d> nose_end_point2D;
+	nose_end_point3D.push_back(cv::Point3d(0,0,1000.0));
+        projectPoints(nose_end_point3D, rotation_vector, translation_vector,camera_matrix, dist_coeffs, nose_end_point2D);
+	//std::cout << "Rotation Vector " << std::endl << rotation_vector << std::endl;
+	//std::cout << "Translation Vector" << std::endl << translation_vector << std::endl;
+
+	cv::Mat temp(faceImg);
+	cv::line(temp ,facial5Pts[2], nose_end_point2D[0], cv::Scalar(255,0,0), 2);
+        cv::imshow("vvvvvvvv" ,temp );
+	cv::waitKey(1);  */
 
 
 
+}
+
+void FaceDetector::updatePoseFromRotationMatrix(const cv::Mat &rotation3_3) {
+    double q0 = std::sqrt(
+            1 + rotation3_3.at<double>(1, 1) + rotation3_3.at<double>(2, 2) + rotation3_3.at<double>(3, 3)) / 2;
+    double q1 = (rotation3_3.at<double>(3, 2) - rotation3_3.at<double>(2, 3)) / (4 * q0);
+    double q2 = (rotation3_3.at<double>(1, 3) - rotation3_3.at<double>(3, 1)) / (4 * q0);
+    double q3 = (rotation3_3.at<double>(2, 1) - rotation3_3.at<double>(1, 2)) / (4 * q0);
+    YawAngle = std::asin(2 * (q0 * q2 + q1 * q3));
+    PitchAngle = std::atan2(2 * (q0 * q1 - q2 * q3), q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3);
+    RollAngle = std::atan2(2 * (q0 * q3 - q1 * q2), q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3);
 }

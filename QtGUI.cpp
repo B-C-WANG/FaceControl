@@ -12,8 +12,8 @@ QtGUI::QtGUI() {
 
 }
 
-void QtGUI::RunFaceDetector() {
-// 点击一次后不允许再次点击
+void QtGUI::ToggleFaceDetector() {
+    // todo 切换显示开关
     runDetectorBtn->setEnabled(false);
     faceDetector->Run();
 
@@ -25,13 +25,13 @@ QWidget *QtGUI::createMainWidget() {
     boxL = new QVBoxLayout();
     // 运行检测主函数的按钮
     runDetectorBtn = new QPushButton();
-    runDetectorBtn->setText("Run Face Detector [运行检测器]");
+    runDetectorBtn->setText("Toogle Face Detector [开关检测器]");
 
     QObject::connect(
             runDetectorBtn,
             &QPushButton::clicked,
             this,
-            &QtGUI::RunFaceDetector);
+            &QtGUI::ToggleFaceDetector);
 
     // 运行睁眼分布采样的函数
     runOpenEyeCollection = new QPushButton();

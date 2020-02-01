@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.13)
 project(FaceControl)
 set(CMAKE_CXX_STANDARD 14)
-add_executable(FaceControl main.cpp FaceDetector.cpp FaceDetector.h BlinkJudge.cpp BlinkJudge.h QtGUI.cpp QtGUI.h)
+add_executable(FaceControl
+        main.cpp
+        FaceDetector.cpp FaceDetector.h
+        BlinkJudge.cpp BlinkJudge.h
+        QtGUI.cpp QtGUI.h
+        LineChart.h LineChart.cpp
+        )
 
 # -----qt 配置-----
 # Mac上只需要brew install qt即可
@@ -15,13 +21,16 @@ ELSEIF (WIN32)
     #    比如加：C:\Qt\Qt5.13.2\5.13.2\mingw73_64\bin
     #    注意加完一定要重启clion，才能应用新的环境变量
     MESSAGE("On Win")
-    set(Qt_Dir C:/Qt/Qt5.13.2/5.13.2/mingw73_64) # qt二进制文件安装后的路径，要选择mingw
+    set(Qt_Dir F:\\Qt5.14.1\\5.14.1/mingw73_64) # qt二进制文件安装后的路径，要选择mingw
 ENDIF ()
 set(CMAKE_PREFIX_PATH ${Qt_Dir}/lib/cmake)
 find_package(Qt5Widgets REQUIRED)
+# 这里和下面的target link都需要Charts
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Charts)
 find_package(Qt5Core)
 find_package(Qt5Gui)
-target_link_libraries(FaceControl Qt5::Widgets)
+target_link_libraries(FaceControl Qt5::Widgets Qt5::Charts)
+
 
 
 # -----dlib相关-windows下-----

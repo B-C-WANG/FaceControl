@@ -30,7 +30,7 @@ public:
 
 public slots:
 
-    void RunFaceDetector();
+    void ToggleFaceDetector();
 
 private:
     QVBoxLayout *boxL;
