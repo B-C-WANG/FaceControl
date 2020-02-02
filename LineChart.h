@@ -6,6 +6,7 @@
 #define FACECONTROL_LINECHART_H
 
 #include "QRandomGenerator"
+#include "QRandomGenerator"
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QTimer>
@@ -23,21 +24,37 @@
 class LineChart : public QWidget {
 
 public:
-    explicit LineChart(QWidget *parent = nullptr);
+    explicit LineChart(
+            QWidget *parent = nullptr,
+            qreal xrangeMax = 100,
+            qreal yrangeMin = 0,
+            qreal yrangeMax = 1,
+            std::vector<std::string> lineNames = {
+                    "1", "2", "3", "4", "5"},
+            int windowWidth = 800,
+            int windowHeight = 600
+    );
+
+    void AddRandomDataForTest();
+
+    void AddData(std::vector<qreal> data);
 
 public slots:
 
     void UpdateData();
 
 private:
-    QTimer m_timer;
+
+    std::vector<QPen *> AllLinePens;
+    std::vector<QSplineSeries *> AllLineSeries;
     QChart chart;
-    QSplineSeries m_series;
-    QStringList m_titles;
-    QValueAxis m_axis;
-    qreal m_step;
-    qreal m_x;
-    qreal m_y;
+    qreal now_data_x;
+    qreal now_data_y;
+    QValueAxis *axisX;
+    QValueAxis *axisY;
+    qreal defaultY;
+
+
 };
 
 

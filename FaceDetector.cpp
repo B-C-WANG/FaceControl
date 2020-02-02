@@ -4,9 +4,19 @@
 
 #include "FaceDetector.h"
 
-FaceDetector::FaceDetector(FaceDetectorKit kit, bool debug) {
+FaceDetector::FaceDetector(FaceDetectorKit kit, bool debug, bool showQtFigs) {
     this->toolkit = kit;
     this->debugMode = debug;
+    this->showQtFigs = showQtFigs;
+    isRunning = false;
+    toPause = false;
+    if (showQtFigs) {
+        eyeFeatureLineChart = new LineChart(
+                nullptr, 100, 0, 1, {"leftEyeFeature", "rightEyeFeature", "3", "4", "5"});
+        poseLineChart = new LineChart(
+                nullptr, 100, -1, 1, {"yaw", "roll", "pitch", "4", "5"});
+
+    }
 
 
 };
@@ -153,10 +163,27 @@ void FaceDetector::Run() {
             return;
         }
     }
+    // 3.5 展示图表
+    if (showQtFigs) {
+        eyeFeatureLineChart->show();
+        poseLineChart->show();
+    }
+
+
 
     // 4. 主循环
     std::cout << "Main loop\n";
     while (cv::waitKey(1)) {
+        isRunning = true;
+        if (toPause) {
+            std::cout<<"toPause!!!";
+
+            toPause = false;
+            cv::destroyAllWindows();
+            isRunning = false;
+            break;
+        }
+
         try {
             // 5. 读入camera数据，预处理
             startTime = std::clock();
@@ -228,6 +255,13 @@ void FaceDetector::Run() {
             if (debugMode)std::cout << "Pose estimate use time: " << std::clock() - startTime << "\n";
             cv::imshow("dlib", temp);
 
+            if (showQtFigs) {
+                // 更新图表数据
+                eyeFeatureLineChart->AddData({leftEyeFeature, rightEyeFeature});
+                poseLineChart->AddData({YawAngle, RollAngle, PitchAngle});
+            }
+
+
 
 // todo:下面的到另一个线程去处理，用上面得到的leftEyeFeature数据
 //            if ((leftEyeFeature < -1) || (rightEyeFeature < -1)) {
@@ -248,12 +282,11 @@ void FaceDetector::Run() {
 //            if (debugMode)std::cout << "judge blink time: " << std::clock() - startTime << "\n";
 
 
-
-
-
         } catch (std::exception &e) {
             std::cout << "error: " << e.what() << "\n";
-            continue;
+            cv::destroyAllWindows();
+            isRunning = false;
+            break;
         }
 
     }
@@ -272,7 +305,7 @@ void FaceDetector::updatePoseFrom68Points(
     // point2d是2维double
     auto allPoints = std::vector<cv::Point2d>();
     for (auto e :allPointsIndex) {
-        allPoints.push_back(cv::Point2d(shapes.part(e).x(), shapes.part(e).y()));
+        allPoints.emplace_back(shapes.part(e).x(), shapes.part(e).y());
     }
     if (debugMode)std::cout << "got all points \n";
 
@@ -285,7 +318,7 @@ void FaceDetector::updatePoseFrom68Points(
             0, 0, 1);
     if (debugMode)std::cout << "got camera matrix \n";
 
-    cv::Mat dist_coeffs = (cv::Mat_<double>(1,5)
+    cv::Mat dist_coeffs = (cv::Mat_<double>(1, 5)
             << 7.0834633684407095e-002, 6.9140193737175351e-002, 0.0, 0.0, -1.3073460323689292e+000);
 
     if (debugMode)std::cout << "got dist_coeffs \n";
@@ -310,7 +343,7 @@ void FaceDetector::updatePoseFrom68Points(
     updatePoseFromRotationMatrix(rotation3_3);
     // yaw是左右转，pitch是上下转动，roll是面内旋转
     // todo: 增加动态图曲线工具，给出point list，绘制img
-    std::cout << "Yaw Roll Pitch " << YawAngle <<" "<< RollAngle <<" "<< PitchAngle << "\n";
+    std::cout << "Yaw Roll Pitch " << YawAngle << " " << RollAngle << " " << PitchAngle << "\n";
 
 
     /*投影一条直线而已
@@ -340,3 +373,8 @@ void FaceDetector::updatePoseFromRotationMatrix(const cv::Mat &rotation3_3) {
     PitchAngle = std::atan2(2 * (q0 * q1 - q2 * q3), q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3);
     RollAngle = std::atan2(2 * (q0 * q3 - q1 * q2), q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3);
 }
+
+void FaceDetector::Pause() {
+    std::cout << "Pause";
+    toPause = true;
+    }

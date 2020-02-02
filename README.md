@@ -1,5 +1,5 @@
 # FaceControl
-使用人脸识别数据进行鼠标控制
+使用人脸识别数据进行鼠标控制：根据头部pose移动鼠标，眨眼控制鼠标点击
 ## 开发
 ### 工具及安装配置
 - C++，opencv，dlib，qt
@@ -7,7 +7,8 @@
 #### qtcharts配置
 - windows下建议重新安装Qt，安装时选中Qt Charts模块
 - 其他平台编译：参考：https://blog.csdn.net/qq_24489251/article/details/100035674
-- 重要：如果是qt的项目，需要在.pro文件中添加QtCharts，现在是CMakeList，所以改成find package以及target link中添加Qt5 Charts，具体查看CMakeLists中的描述
+- 重要：如果是qt的项目，需要在.pro文件中添加QtCharts，而对于mingw项目，在CMakeList中改成find package以及target link中添加Qt5 Charts，具体查看CMakeLists中的描述
+- qtcharts教程：https://doc.qt.io/archives/qt-5.13/qtcharts-examples.html
 ### 框架
 - GUI中使用Qt开发control panel负责控制函数调用，以及配置（如启动、暂停和关闭face detection）
 - GUI中使用QtCharts开发status panel负责展示数据（如展示面部位置，眨眼特征参数，yaw roll pitch等）
@@ -17,6 +18,7 @@
 1. 读取camera矩阵数据，使用人脸识别得到人脸的bounding box
 2. 将bounding box内的image放入特征点检测，得到所有特征点的xy坐标
 3. 根据xy坐标求得眼眶数据，脸部方向等数据
+4. 上面流程得到的所有数据经过滤波或者平滑等处理过后展示，以及用于后续的pose等数据的最终检测
 ### 方案
 1. 脸部检测方案，如果使用dlib::frontal_face_detector，耗时是特征点检测的20倍，不能满足fps要求，因此face检测使用Opencv的CascadeClassifier，可以近似达到30fps
 2. 特征点检测可以使用dlib::shape_predictor，基本能够满足效率要求，不是性能瓶颈

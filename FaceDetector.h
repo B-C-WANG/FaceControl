@@ -14,12 +14,13 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include<time.h>
+#include <time.h>
 #include "string"
 #include <cmath>
 #include "algorithm"
 #include<iostream>
 #include<ctime>
+#include "LineChart.h"
 
 enum EyeType {
     Left,
@@ -34,11 +35,11 @@ enum FaceDetectorKit {
 class FaceDetector {
 public:
 
-    double leftEyeFeature;
-    double rightEyeFeature;
-    double YawAngle;
-    double RollAngle;
-    double PitchAngle;
+    double leftEyeFeature = 0.0;
+    double rightEyeFeature = 0.0;
+    double YawAngle = 0.0;
+    double RollAngle = 0.0;
+    double PitchAngle = 0.0;
 
 
 
@@ -48,21 +49,28 @@ public:
 //    virtual void OnRightEyeBlinked();
 
 
-    FaceDetector(FaceDetectorKit kit, bool debug = false);
+    explicit FaceDetector(FaceDetectorKit kit, bool debug = false, bool showQtFigs = true);
 
     // useFaceDetectRectangle 是否使用人脸检测的框来进行特征点识别，用的话精确很多但是慢很多
     void Run();
 
+    // 暂停Run
+    void Pause();
+    bool isRunning = false;
+
 private:
+    bool showQtFigs;
+    bool toPause = false;
     FaceDetectorKit toolkit;
     bool debugMode;
-
+    LineChart *eyeFeatureLineChart;
+    LineChart *poseLineChart;
 
     float handleOneEye(std::vector<dlib::full_object_detection> shapes,
                        EyeType eye,
                        cv::Mat canvas);
 
-    float getDistance(float x1, float y1, float x2, float y2);
+    static float getDistance(float x1, float y1, float x2, float y2);
 
     void updatePoseFrom68Points(
             dlib::full_object_detection shapes,

@@ -7,6 +7,7 @@ add_executable(FaceControl
         BlinkJudge.cpp BlinkJudge.h
         QtGUI.cpp QtGUI.h
         LineChart.h LineChart.cpp
+        DistributionPlot.cpp DistributionPlot.h
         )
 
 # -----qt 配置-----
@@ -30,7 +31,6 @@ find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Charts)
 find_package(Qt5Core)
 find_package(Qt5Gui)
 target_link_libraries(FaceControl Qt5::Widgets Qt5::Charts)
-
 
 
 # -----dlib相关-windows下-----
