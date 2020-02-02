@@ -43,7 +43,7 @@ public slots:
 
     void UpdateData();
 
-private:
+protected:
 
     std::vector<QPen *> AllLinePens;
     std::vector<QSplineSeries *> AllLineSeries;

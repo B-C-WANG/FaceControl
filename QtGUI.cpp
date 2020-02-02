@@ -34,9 +34,19 @@ QtGUI::QtGUI() {
             this,
             &QtGUI::ToggleCollectCloseEyeData);
 
+    auto clearDistrbDataButton = new QPushButton();
+    clearDistrbDataButton->setText("清空分布特征数据");
+    QObject::connect(
+            clearDistrbDataButton,
+            &QPushButton::clicked,
+            this,
+            &QtGUI::ClearDistribData);
+
     boxL->addWidget(runDetectorBtn);
     boxL->addWidget(runOpenEyeCollection);
     boxL->addWidget(runCloseEyeCollection);
+    boxL->addWidget(clearDistrbDataButton);
+
 
     //FaceDetector faceDetector = FaceDetector(Dlib_frontal_face_detector);
     faceDetector = new FaceDetector(Opencv_CascadeClassifier, false, false);
@@ -48,8 +58,9 @@ QtGUI::QtGUI() {
             nullptr, 100, -3.2, 3.2,
             {"yaw", "roll", "pitch", "4", "5"},
             400, 300);
-    eyeFeatureDistri = new DistributionPlot();
-
+    eyeFeatureDistri = new DistributionPlot(10,
+                                            "open eye features",
+                                            "close eye features");
 
     // 不同步更新FaceDetector数据，直接show，使用Timer定时更新数据
     //  TODO： faceDetector增加滤波器
@@ -60,7 +71,7 @@ QtGUI::QtGUI() {
             &QTimer::timeout,
             this,
             &QtGUI::UpdateDataFromFaceDetector);
-    m_timer->setInterval(1000);
+    m_timer->setInterval(100);
     m_timer->start();
 
     // 加一个水平layout
@@ -73,6 +84,7 @@ QtGUI::QtGUI() {
     biggerLayout->addLayout(bigLayout);
     biggerLayout->addWidget(eyeFeatureDistri);
     this->setLayout(biggerLayout);
+
 
 }
 
@@ -88,7 +100,6 @@ void QtGUI::ToggleFaceDetector() {
 
 
 void QtGUI::UpdateDataFromFaceDetector() {
-    std::cout << "updateData";
 
     eyeFeatureLineChart->AddData({faceDetector->leftEyeFeature,
                                   faceDetector->rightEyeFeature});
@@ -96,6 +107,15 @@ void QtGUI::UpdateDataFromFaceDetector() {
     poseLineChart->AddData({faceDetector->YawAngle,
                             faceDetector->RollAngle,
                             faceDetector->PitchAngle});
+    if (isCollectingOpenEyeData) {
+        eyeFeatureDistri->AddBarData(0, faceDetector->leftEyeFeature);
+        eyeFeatureDistri->AddBarData(0, faceDetector->rightEyeFeature);
+    }
+    if (isCollectingCloseEyeData) {
+        eyeFeatureDistri->AddBarData(1, faceDetector->leftEyeFeature);
+        eyeFeatureDistri->AddBarData(1, faceDetector->rightEyeFeature);
+    }
+
 
 }
 
@@ -105,7 +125,6 @@ void QtGUI::ToggleCollectOpenEyeData() {
         runOpenEyeCollection->setText(buttonTextStopCollecting);
 
     } else {
-        // todo: 这里清空现有数据
         isCollectingOpenEyeData = false;
         runOpenEyeCollection->setText(buttonTextForStartCollectingOpenEyeData);
     }
@@ -118,10 +137,16 @@ void QtGUI::ToggleCollectCloseEyeData() {
         runCloseEyeCollection->setText(buttonTextStopCollecting);
 
     } else {
-        // todo: 这里清空现有数据
         isCollectingCloseEyeData = false;
         runCloseEyeCollection->setText(buttonTextForStartCollectingCloseEyeData);
     }
+
+}
+
+void QtGUI::ClearDistribData() {
+    eyeFeatureDistri->ClearBarData(0);
+    eyeFeatureDistri->ClearBarData(1);
+
 
 }
 

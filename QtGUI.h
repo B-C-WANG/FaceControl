@@ -37,6 +37,8 @@ public slots:
     void ToggleFaceDetector();
     void ToggleCollectOpenEyeData();
     void ToggleCollectCloseEyeData();
+    void ClearDistribData();
+
 
 private:
     bool isCollectingOpenEyeData = false;
@@ -48,9 +50,9 @@ private:
     QPushButton *runDetectorBtn;
     QPushButton *runOpenEyeCollection;
     QPushButton *runCloseEyeCollection;
-    QString buttonTextForStartCollectingOpenEyeData = "Collect For Eyes Open [开始采样睁眼特征分布]";
-    QString buttonTextForStartCollectingCloseEyeData = "Collect For Eyes Close [开始采样闭眼特征分布]";
-    QString buttonTextStopCollecting = "Stop [停止采样]";
+    QString buttonTextForStartCollectingOpenEyeData = "Collect For Eyes Open [开始/继续采样睁眼特征分布]";
+    QString buttonTextForStartCollectingCloseEyeData = "Collect For Eyes Close [开始/继续采样闭眼特征分布]";
+    QString buttonTextStopCollecting = "Stop [暂停采样]";
     DistributionPlot *eyeFeatureDistri;
 
 

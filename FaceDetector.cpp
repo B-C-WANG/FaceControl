@@ -103,24 +103,6 @@ float FaceDetector::handleOneEye(
     // 只要这个值小于一个阈值就可以说明闭上眼睛了
     auto eyeFeature = std::fmin(length, height) / std::fmax(length, height);
 
-    // 下面的debug数据只在左眼生效
-    if (eye == Left) {
-        if (debugMode)std::cout << "Eye feature " << eyeFeature << std::endl;
-
-        putText(canvas, "left eye height " + std::to_string(height), cv::Point(10, 100), cv::FONT_HERSHEY_SIMPLEX,
-                0.3,
-                cv::Scalar(12, 255, 200), 1,
-                cv::LINE_AA);
-        putText(canvas, "left eye length " + std::to_string(length), cv::Point(10, 150), cv::FONT_HERSHEY_SIMPLEX,
-                0.3,
-                cv::Scalar(12, 255, 200), 1,
-                cv::LINE_AA);
-        putText(canvas, "left eye feature" + std::to_string(eyeFeature), cv::Point(10, 200), cv::FONT_HERSHEY_SIMPLEX,
-                0.3,
-                cv::Scalar(12, 255, 200), 1,
-                cv::LINE_AA);
-
-    }
     return eyeFeature;
 
 }
@@ -237,11 +219,6 @@ void FaceDetector::Run() {
                     //用来画特征值的点
                     cv::circle(temp, cvPoint(shapes[j].part(i).x(), shapes[j].part(i).y()), 1,
                                cv::Scalar(0, 0, 255), -1);
-                    //参数说明 图像 圆心 线条宽度 颜色 线的类型
-                    //显示数字，注意这些数字后面会用来求眼睛的宽度、位置等
-                    cv::putText(temp, std::to_string(i), cvPoint(shapes[0].part(i).x(), shapes[0].part(i).y()),
-                                cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 0, 255));
-
                 }
             }
             // 8. 获得眼部特征，获得完毕过后到另一个线程去处理！

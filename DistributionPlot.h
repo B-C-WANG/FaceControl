@@ -21,35 +21,31 @@
 #include "QtCharts/QValueAxis"
 #include "QtCharts/QSplineSeries"
 #include <QtWidgets/QWidget>
-
-class DistributionPlot : public QWidget {
-    // 负责绘制值的分布
+#include "LineChart.h"
+#include "algorithm"
+class DistributionPlot : public LineChart {
+    // 负责绘制值的分布，是一个特殊的LineChart
+    //  需要计算值的分布，然后更新坐标点数据，用曲线代表分布
 public:
-    explicit DistributionPlot(
-            QWidget *parent = nullptr,
-            std::vector<std::string> seriesNames = {"1", "2"},
-            int windowWidth = 600,
-            int windowHeight = 450);
+    explicit DistributionPlot(int nBins, std::string distri1Name, std::string distri2Name);
 
-    void AddData(int barIndex, qreal data);
 
-    void ClearData(int barIndex);
+    void AddBarData(int barIndex, qreal data);
+
+    void ClearBarData(int barIndex);
 
 private:
-    QBarSet* bar1Data;
-    QBarSet* bar2Data;
 
-    std::vector<QPen *> AllLinePens;
-    std::vector<QSplineSeries *> AllLineSeries;
-    QChart chart;
-    qreal now_data_x{};
-    qreal now_data_y{};
+    void modifyLineChartXYDataFromDataset(
+            std::vector<qreal> *dataset,
+            std::vector<qreal> &xToModify,
+            std::vector<qreal> &yToModify);
 
-    QBarSeries *bar1;
-    QBarSeries *bar2;
-    QValueAxis *axisX{};
-    QValueAxis *axisY{};
-    qreal defaultY{};
+    std::vector<qreal> *bar1Data;
+    std::vector<qreal> *bar2Data;
+    int nBins;
+
+
 
 };
 

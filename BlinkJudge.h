@@ -15,13 +15,7 @@ public:
     float blinkThreshold = 0.1;
 
     bool judgeIfBlinkEye(EyeType eye, double nowEyeFeature);
-    // 多线程引用
-    FaceDetector & faceDetector;
 
-    // 收集睁开眼睛的数据
-    void WarmOpenEyes();
-    // 收集闭上眼睛的数据
-    void WarmCloseEyes();
 
 
 private:
