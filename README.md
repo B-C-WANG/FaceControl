@@ -2,10 +2,16 @@
 - 最终功能：基于人脸识别数据进行鼠标控制——根据头部pose移动鼠标，眨眼控制鼠标左右点击
 ## 子项目
 - MyImplCpp：自己使用cpp+opencv+dlib实现了一个，但是准确性较差，难以实用
-- 3DDFAImpl：使用https://github.com/cleardusk/3DDFA作为检测引擎，效果较好
+- 3DDFAImpl：使用https://github.com/cleardusk/3DDFA作为检测引擎，脸部landmark和头部pose估计相对准确,但是对于闭眼难以识别,
 ## 子项目：3DDFAImpl
 - 在ubuntu下测试通过，windows下因dlib安装问题并未测试
 - 安装配置：查看子项目文件夹README.md，或原仓库https://github.com/cleardusk/3DDFA的README
+- 本项目下的3DDFA需要额外下载原仓库有的models,train.config以及test.config信息,在release中可以下载压缩文件,解压到3DDFAImpl可直接使用
+### 效果展示
+![](./1.gif)
+### 运行
+- 运行cameraRun可以看到landmark以及头部pose信息,但是landmark仍然不能用于眨眼检测
+
 
 ## 子项目：MyImplCpp
 ### 效果展示
